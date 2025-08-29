@@ -95,6 +95,9 @@ spec:
     {{- if .Values.gds.args }}
     args: {{ toYaml .Values.gds.args | nindent 6 }}
     {{- end }}
+    {{- if .Values.gds.resources }}
+    resources: {{ toYaml .Values.gds.resources | nindent 6 }}
+    {{- end }}
   {{- end }}
   {{- if .Values.gdrcopy }}
   gdrcopy:
@@ -117,6 +120,9 @@ spec:
     {{- end }}
     {{- if .Values.gdrcopy.args }}
     args: {{ toYaml .Values.gdrcopy.args | nindent 6 }}
-    {{- end  }}
+    {{- end }}
+    {{- if .Values.gdrcopy.resources }}
+    resources: {{ toYaml .Values.gdrcopy.resources | nindent 6 }}
+    {{- end }}
   {{- end }}
 {{- end }}
