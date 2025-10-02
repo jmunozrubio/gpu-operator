@@ -173,6 +173,26 @@ func (p Pod) WithRuntimeClassName(name string) Pod {
 	return p
 }
 
+func TestFindContainerByName(t *testing.T) {
+	containers := []corev1.Container{
+		{Name: "config"},
+		{Name: "target", Image: "initial"},
+	}
+
+	t.Run("found", func(t *testing.T) {
+		result := findContainerByName(containers, "target")
+		require.NotNil(t, result)
+		require.Equal(t, "target", result.Name)
+		result.Image = "updated"
+		require.Equal(t, "updated", containers[1].Image)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		result := findContainerByName(containers, "missing")
+		require.Nil(t, result)
+	})
+}
+
 func TestTransformForHostRoot(t *testing.T) {
 	hostRootVolumeName := "host-root"
 	hostDevCharVolumeName := "host-dev-char"
@@ -878,6 +898,44 @@ func TestTransformDevicePlugin(t *testing.T) {
 			require.EqualValues(t, tc.expectedDs, tc.ds)
 		})
 	}
+}
+
+func TestTransformMPSControlDaemon(t *testing.T) {
+	controller := clusterPolicyController
+
+	daemonSet := &appsv1.DaemonSet{
+		Spec: appsv1.DaemonSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					InitContainers: []corev1.Container{{Name: "mps-control-daemon-mounts"}},
+					Containers:     []corev1.Container{{Name: "mps-control-daemon-ctr"}},
+				},
+			},
+		},
+	}
+
+	clusterPolicyCopy := clusterPolicy.DeepCopy()
+	clusterPolicyCopy.Spec.DevicePlugin.Image = "mps"
+	clusterPolicyCopy.Spec.DevicePlugin.Repository = "nvcr.io"
+	clusterPolicyCopy.Spec.DevicePlugin.Version = "latest"
+	clusterPolicyCopy.Spec.DevicePlugin.ImagePullPolicy = string(corev1.PullAlways)
+	clusterPolicyCopy.Spec.DevicePlugin.ImagePullSecrets = []string{"secret"}
+	clusterPolicyCopy.Spec.DevicePlugin.MPS = &gpuv1.MPSConfig{Root: "/var/mps"}
+
+	req := require.New(t)
+
+	req.NoError(TransformMPSControlDaemon(daemonSet, &clusterPolicyCopy.Spec, controller))
+
+	initContainer := findContainerByName(daemonSet.Spec.Template.Spec.InitContainers, "mps-control-daemon-mounts")
+	mpsControlMainContainer := findContainerByName(daemonSet.Spec.Template.Spec.Containers, "mps-control-daemon-ctr")
+	req.NotNil(initContainer)
+	req.NotNil(mpsControlMainContainer)
+	req.Equal(mpsControlMainContainer.Image, initContainer.Image)
+	req.Equal(gpuv1.ImagePullPolicy(clusterPolicyCopy.Spec.DevicePlugin.ImagePullPolicy), initContainer.ImagePullPolicy)
+	req.Equal(gpuv1.ImagePullPolicy(clusterPolicyCopy.Spec.DevicePlugin.ImagePullPolicy), mpsControlMainContainer.ImagePullPolicy)
+
+	daemonSet.Spec.Template.Spec.Containers = nil
+	req.Error(TransformMPSControlDaemon(daemonSet, &clusterPolicyCopy.Spec, controller))
 }
 
 func TestTransformDCGMExporter(t *testing.T) {
