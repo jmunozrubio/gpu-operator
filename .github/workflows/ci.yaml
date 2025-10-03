@@ -15,11 +15,13 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "pull-request/[0-9]+"
       - main
       - release-*
+      - custom_cuda
 
 jobs:
   ### Configuration checks ###
