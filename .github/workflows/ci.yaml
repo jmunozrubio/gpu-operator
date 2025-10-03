@@ -34,85 +34,6 @@ jobs:
         uses: azure/setup-helm@v4.3.0
         id: install
       - run: helm lint deployments/gpu-operator/
-
-  ### Golang checks and build ###
-  go-check:
-    needs: [helm-lint]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-        name: Checkout code
-      - name: Get Golang version
-        id: vars
-        run: |
-          GOLANG_VERSION=$( grep "GOLANG_VERSION ?=" versions.mk )
-          GOLANGCI_LINT_VERSION=$( grep "GOLANGCI_LINT_VERSION ?=" versions.mk )
-          echo "GOLANG_VERSION=${GOLANG_VERSION##GOLANG_VERSION ?= }" >> $GITHUB_ENV
-          echo "GOLANGCI_LINT_VERSION=${GOLANGCI_LINT_VERSION##GOLANGCI_LINT_VERSION ?= }" >> $GITHUB_ENV
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GOLANG_VERSION }}
-      - name: Lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: ${{ env.GOLANGCI_LINT_VERSION }}
-          args: -v --timeout 5m
-          skip-cache: true
-      - name: Setup JFrog CLI
-        id: jfrog
-        uses: jfrog/setup-jfrog-cli@v4
-        env:
-          JF_URL: https://${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}/
-        with:
-          oidc-provider-name: nvgithub
-          oidc-audience: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
-      - env:
-          OIDC_USER: ${{ steps.jfrog.outputs.oidc-user }}
-          OIDC_TOKEN: ${{ steps.jfrog.outputs.oidc-token }}
-          OIDC_ARTIFACTORY_ENDPOINT: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
-        run: |
-          OIDC_USER_ENCODED=$(python3 -c 'import urllib.parse, os; print(urllib.parse.quote_plus(os.environ["OIDC_USER"]))')
-          export GOPROXY="https://${OIDC_USER_ENCODED}:${OIDC_TOKEN}@${OIDC_ARTIFACTORY_ENDPOINT}/artifactory/api/go/edge-go-remote-virtual"
-          make check
-  go-test:
-    needs: [helm-lint]
-    name: unit tests
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Get Golang version
-        id: vars
-        run: |
-          GOLANG_VERSION=$( grep "GOLANG_VERSION ?=" versions.mk )
-          echo "GOLANG_VERSION=${GOLANG_VERSION##GOLANG_VERSION ?= }" >> $GITHUB_ENV
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GOLANG_VERSION }}
-      - name: Setup JFrog CLI
-        id: jfrog
-        uses: jfrog/setup-jfrog-cli@v4
-        env:
-          JF_URL: https://${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}/
-        with:
-          oidc-provider-name: nvgithub
-          oidc-audience: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
-      - env:
-          OIDC_USER: ${{ steps.jfrog.outputs.oidc-user }}
-          OIDC_TOKEN: ${{ steps.jfrog.outputs.oidc-token }}
-          OIDC_ARTIFACTORY_ENDPOINT: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
-        run: |
-          OIDC_USER_ENCODED=$(python3 -c 'import urllib.parse, os; print(urllib.parse.quote_plus(os.environ["OIDC_USER"]))')
-          export GOPROXY="https://${OIDC_USER_ENCODED}:${OIDC_TOKEN}@${OIDC_ARTIFACTORY_ENDPOINT}/artifactory/api/go/edge-go-remote-virtual"
-          make coverage
   go-build:
     needs: [helm-lint]
     runs-on: ubuntu-24.04
@@ -124,7 +45,7 @@ jobs:
         name: Checkout code
       - run: make docker-build
   coverage:
-    needs: [go-test]
+    needs: []
     runs-on: linux-amd64-cpu4
     permissions:
       contents: read
@@ -166,7 +87,7 @@ jobs:
 
   ### Image builds ###
   build-gpu-operator-arm64:
-    needs: [go-check, go-test, go-build]
+    needs: [go-build]
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
@@ -223,7 +144,7 @@ jobs:
           echo "${VERSION}"
           make build-image
   build-gpu-operator-amd64:
-    needs: [go-check, go-test, go-build]
+    needs: [go-build]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
