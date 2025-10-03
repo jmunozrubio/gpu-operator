@@ -37,7 +37,7 @@ jobs:
 
   ### Golang checks and build ###
   go-check:
-    needs: [helm-lint, validate-csv, validate-helm-values]
+    needs: [helm-lint]
     runs-on: linux-amd64-cpu4
     permissions:
       contents: read
@@ -79,7 +79,7 @@ jobs:
           export GOPROXY="https://${OIDC_USER_ENCODED}:${OIDC_TOKEN}@${OIDC_ARTIFACTORY_ENDPOINT}/artifactory/api/go/edge-go-remote-virtual"
           make check
   go-test:
-    needs: [helm-lint, validate-csv, validate-helm-values]
+    needs: [helm-lint]
     name: unit tests
     runs-on: linux-amd64-cpu4
     permissions:
@@ -114,7 +114,7 @@ jobs:
           export GOPROXY="https://${OIDC_USER_ENCODED}:${OIDC_TOKEN}@${OIDC_ARTIFACTORY_ENDPOINT}/artifactory/api/go/edge-go-remote-virtual"
           make coverage
   go-build:
-    needs: [helm-lint, validate-csv, validate-helm-values]
+    needs: [helm-lint]
     runs-on: linux-amd64-cpu4
     permissions:
       contents: read
