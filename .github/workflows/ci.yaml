@@ -38,7 +38,7 @@ jobs:
   ### Golang checks and build ###
   go-check:
     needs: [helm-lint]
-    runs-on: linux-amd64-cpu4
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
@@ -81,7 +81,7 @@ jobs:
   go-test:
     needs: [helm-lint]
     name: unit tests
-    runs-on: linux-amd64-cpu4
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
@@ -115,7 +115,7 @@ jobs:
           make coverage
   go-build:
     needs: [helm-lint]
-    runs-on: linux-amd64-cpu4
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
@@ -167,7 +167,7 @@ jobs:
   ### Image builds ###
   build-gpu-operator-arm64:
     needs: [go-check, go-test, go-build]
-    runs-on: linux-arm64-cpu4
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       id-token: write
@@ -224,7 +224,7 @@ jobs:
           make build-image
   build-gpu-operator-amd64:
     needs: [go-check, go-test, go-build]
-    runs-on: linux-amd64-cpu4
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
