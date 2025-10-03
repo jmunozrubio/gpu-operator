@@ -90,21 +90,14 @@ jobs:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           args: -v --timeout 5m
           skip-cache: true
-      - name: Setup JFrog CLI
-        id: jfrog
-        uses: jfrog/setup-jfrog-cli@v4
-        env:
-          JF_URL: https://${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}/
+      - name: JFrog Artifactory
+        id: jfrog-artifactory
+        uses: ./.github/actions/jfrog-artifactory-goproxy
         with:
-          oidc-provider-name: nvgithub
-          oidc-audience: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
+          artifactory-endpoint: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
       - env:
-          OIDC_USER: ${{ steps.jfrog.outputs.oidc-user }}
-          OIDC_TOKEN: ${{ steps.jfrog.outputs.oidc-token }}
-          OIDC_ARTIFACTORY_ENDPOINT: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
+          GOPROXY: ${{ steps.jfrog-artifactory.outputs.goproxy-url }}
         run: |
-          OIDC_USER_ENCODED=$(python3 -c 'import urllib.parse, os; print(urllib.parse.quote_plus(os.environ["OIDC_USER"]))')
-          export GOPROXY="https://${OIDC_USER_ENCODED}:${OIDC_TOKEN}@${OIDC_ARTIFACTORY_ENDPOINT}/artifactory/api/go/edge-go-remote-virtual"
           make check
   go-test:
     needs: [helm-lint, validate-csv, validate-helm-values]
@@ -125,21 +118,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GOLANG_VERSION }}
-      - name: Setup JFrog CLI
-        id: jfrog
-        uses: jfrog/setup-jfrog-cli@v4
-        env:
-          JF_URL: https://${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}/
+      - name: JFrog Artifactory
+        id: jfrog-artifactory
+        uses: ./.github/actions/jfrog-artifactory-goproxy
         with:
-          oidc-provider-name: nvgithub
-          oidc-audience: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
+          artifactory-endpoint: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
       - env:
-          OIDC_USER: ${{ steps.jfrog.outputs.oidc-user }}
-          OIDC_TOKEN: ${{ steps.jfrog.outputs.oidc-token }}
-          OIDC_ARTIFACTORY_ENDPOINT: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
+          GOPROXY: ${{ steps.jfrog-artifactory.outputs.goproxy-url }}
         run: |
-          OIDC_USER_ENCODED=$(python3 -c 'import urllib.parse, os; print(urllib.parse.quote_plus(os.environ["OIDC_USER"]))')
-          export GOPROXY="https://${OIDC_USER_ENCODED}:${OIDC_TOKEN}@${OIDC_ARTIFACTORY_ENDPOINT}/artifactory/api/go/edge-go-remote-virtual"
           make coverage
   go-build:
     needs: [helm-lint, validate-csv, validate-helm-values]
@@ -169,22 +155,15 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GOLANG_VERSION }}
-      - name: Setup JFrog CLI
-        id: jfrog
-        uses: jfrog/setup-jfrog-cli@v4
-        env:
-          JF_URL: https://${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}/
+      - name: JFrog Artifactory
+        id: jfrog-artifactory
+        uses: ./.github/actions/jfrog-artifactory-goproxy
         with:
-          oidc-provider-name: nvgithub
-          oidc-audience: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
+          artifactory-endpoint: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
       - name: Generate coverage report
         env:
-          OIDC_USER: ${{ steps.jfrog.outputs.oidc-user }}
-          OIDC_TOKEN: ${{ steps.jfrog.outputs.oidc-token }}
-          OIDC_ARTIFACTORY_ENDPOINT: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
+          GOPROXY: ${{ steps.jfrog-artifactory.outputs.goproxy-url }}
         run: |
-          OIDC_USER_ENCODED=$(python3 -c 'import urllib.parse, os; print(urllib.parse.quote_plus(os.environ["OIDC_USER"]))')
-          export GOPROXY="https://${OIDC_USER_ENCODED}:${OIDC_TOKEN}@${OIDC_ARTIFACTORY_ENDPOINT}/artifactory/api/go/edge-go-remote-virtual"
           make cov-report
       - name: Upload to Coveralls
         uses: coverallsapp/github-action@v2
@@ -230,24 +209,17 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Setup JFrog CLI
-        id: jfrog
-        uses: jfrog/setup-jfrog-cli@v4
-        env:
-          JF_URL: https://${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}/
+      - name: JFrog Artifactory
+        id: jfrog-artifactory
+        uses: ./.github/actions/jfrog-artifactory-goproxy
         with:
-          oidc-provider-name: nvgithub
-          oidc-audience: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
+          artifactory-endpoint: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
       - name: Build image
         env:
           IMAGE_NAME: ghcr.io/${LOWERCASE_REPO_OWNER}/gpu-operator
           VERSION: ${COMMIT_SHORT_SHA}-arm64
-          OIDC_USER: ${{ steps.jfrog.outputs.oidc-user }}
-          OIDC_TOKEN: ${{ steps.jfrog.outputs.oidc-token }}
-          OIDC_ARTIFACTORY_ENDPOINT: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
+          GOPROXY: ${{ steps.jfrog-artifactory.outputs.goproxy-url }}
         run: |
-          OIDC_USER_ENCODED=$(python3 -c 'import urllib.parse, os; print(urllib.parse.quote_plus(os.environ["OIDC_USER"]))')
-          export GOPROXY="https://${OIDC_USER_ENCODED}:${OIDC_TOKEN}@${OIDC_ARTIFACTORY_ENDPOINT}/artifactory/api/go/edge-go-remote-virtual"
           echo "${VERSION}"
           make build-image
   build-gpu-operator-amd64:
@@ -287,24 +259,17 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Setup JFrog CLI
-        id: jfrog
-        uses: jfrog/setup-jfrog-cli@v4
-        env:
-          JF_URL: https://${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}/
+      - name: JFrog Artifactory
+        id: jfrog-artifactory
+        uses: ./.github/actions/jfrog-artifactory-goproxy
         with:
-          oidc-provider-name: nvgithub
-          oidc-audience: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
+          artifactory-endpoint: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
       - name: Build image
         env:
           IMAGE_NAME: ghcr.io/${LOWERCASE_REPO_OWNER}/gpu-operator
           VERSION: ${COMMIT_SHORT_SHA}-amd64
-          OIDC_USER: ${{ steps.jfrog.outputs.oidc-user }}
-          OIDC_TOKEN: ${{ steps.jfrog.outputs.oidc-token }}
-          OIDC_ARTIFACTORY_ENDPOINT: ${{ secrets.OIDC_ARTIFACTORY_ENDPOINT }}
+          GOPROXY: ${{ steps.jfrog-artifactory.outputs.goproxy-url }}
         run: |
-          OIDC_USER_ENCODED=$(python3 -c 'import urllib.parse, os; print(urllib.parse.quote_plus(os.environ["OIDC_USER"]))')
-          export GOPROXY="https://${OIDC_USER_ENCODED}:${OIDC_TOKEN}@${OIDC_ARTIFACTORY_ENDPOINT}/artifactory/api/go/edge-go-remote-virtual"
           echo "${VERSION}"
           make build-image
 
